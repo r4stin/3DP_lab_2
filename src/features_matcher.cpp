@@ -82,6 +82,37 @@ void FeatureMatcher::exhaustiveMatching()
       /////////////////////////////////////////////////////////////////////////////////////////
 
       
+        // match descriptors
+        cv::Ptr<cv::DescriptorMatcher> matcher = cv::DescriptorMatcher::create("BruteForce-Hamming");
+        matcher->match(descriptors_[i], descriptors_[j], matches);
+        // Extract the points to calculate Essential matrix and the Homograph matrix
+        std::vector<cv::Point2f> points1, points2;
+        for (int k = 0; k < matches.size(); k++)
+        {
+            points1.push_back(features_[i][matches[k].queryIdx].pt);
+            points2.push_back(features_[j][matches[k].trainIdx].pt);
+        }
+
+
+        double threshold = 1.0;
+        cv::Mat mask;
+        cv::Mat E = cv::findEssentialMat(points1, points2, new_intrinsics_matrix_, cv::RANSAC, 0.999, threshold, mask);
+        cv::Mat H = cv::findHomography(points1, points2, cv::RANSAC, threshold, mask);
+        // Extract inliers
+        for (int k = 0; k < mask.rows; k++)
+        {
+            if (mask.at<uchar>(k, 0) == 1)
+            {
+                inlier_matches.push_back(matches[k]);
+            }
+        }
+
+        // Threshold for inliers to set the matches
+        if (inlier_matches.size() > 5)
+        {
+            setMatches(i, j, inlier_matches);
+        }
+
       
       
       
