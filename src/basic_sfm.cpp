@@ -519,12 +519,41 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
   // Otherwise, return false (we will try a new seed pair)
   // IN case of "good" sideward motion, store the transformation into init_r_mat and  init_t_vec; defined above
   /////////////////////////////////////////////////////////////////////////////////////////
-	// TODO
-	// start with pair better from essential matrix 
-	// 
-	//
-	//
-	
+  double threshold = 0.001;
+    cv::Mat E = cv::findEssentialMat(points0, points1, intrinsics_matrix, cv::RANSAC, 0.999, threshold, inlier_mask_E);
+    cv::Mat H = cv::findHomography(points0, points1, cv::RANSAC, threshold, inlier_mask_H);
+
+    // Check the number of inliers
+    int num_inliers_E = cv::countNonZero(inlier_mask_E);
+    int num_inliers_H = cv::countNonZero(inlier_mask_H);
+
+    // If the number of inliers for E is not higher than H, return false
+    if (num_inliers_E <= num_inliers_H)
+    {
+        return false;
+    }
+
+    // Recover the initial rigid body transformation from E
+    cv::Mat R1, t;
+    cv::recoverPose(E, points0, points1, intrinsics_matrix, R1, t, inlier_mask_E);
+
+
+    cv::Mat rvec;
+    cv::Rodrigues(R1, rvec);
+    double angle_y = rvec.at<double>(1) * 180.0 / CV_PI;
+
+    if (angle_y < 45.0 || angle_y > 135.0)  
+    {
+        // Store the transformation
+        init_r_mat = R1.clone();
+        init_t_vec = t.clone();
+    }
+    else
+    {
+        return false; 
+    }
+  
+  
   
   
   
