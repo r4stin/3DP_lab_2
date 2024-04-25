@@ -25,6 +25,10 @@ void FeatureMatcher::extractFeatures()
   features_.resize(images_names_.size());
   descriptors_.resize(images_names_.size());
   feats_colors_.resize(images_names_.size());
+  
+  
+  //cv::Ptr<cv::SIFT> sift = cv::SIFT::create();
+  cv::Ptr<cv::ORB> orb = cv::ORB::create(10000, 1.2, 8);
 
   for( int i = 0; i < images_names_.size(); i++  )
   {
@@ -37,7 +41,13 @@ void FeatureMatcher::extractFeatures()
     // Extract also the color (i.e., the cv::Vec3b information) of each feature, and store
     // it into feats_colors_[i] vector
     /////////////////////////////////////////////////////////////////////////////////////////
-
+     // extract features and descriptors using SIFT/ORB
+      orb->detectAndCompute(img, cv::noArray(), features_[i], descriptors_[i]);
+      //sift->detectAndCompute(img, cv::noArray(), features_[i], descriptors_[i]);
+      // extract color for each feature
+      for(int j=0; j<features_[i].size(); ++j) {
+          feats_colors_[i].push_back(img.at<cv::Vec3b>((int) features_[i][j].pt.y, (int) features_[i][j].pt.x));
+      }
 
     
     
