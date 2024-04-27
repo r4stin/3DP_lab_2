@@ -543,7 +543,7 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
     double angle_y = rvec.at<double>(1) * 180.0 / CV_PI;
 
     // Check if the recovered transformation is mainly given by a sideward motion
-    
+
     if (abs(t.at<double>(2)) > abs(t.at<double>(0)) && abs(t.at<double>(2)) > abs(t.at<double>(1)))
     {
         return false;
@@ -749,7 +749,7 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
             /////////////////////////////////////////////////////////////////////////////////////////
 
                 
-                
+            //triangulatePoints(proj_mat0, proj_mat1, points0, points1, hpoints4D);
 
                 
                 
