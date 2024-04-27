@@ -113,7 +113,7 @@ void FeatureMatcher::exhaustiveMatching()
             setMatches(i, j, inlier_matches);
         }
 
-      
+        inlier_matches.clear();
       
       
 
