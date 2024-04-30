@@ -23,10 +23,6 @@ struct ReprojectionError
   // pay attention to the order of the template parameters
   //////////////////////////////////////////////////////////////////////////////////////////
   
-  
-  
-  
-  
   /////////////////////////////////////////////////////////////////////////////////////////
 };
 
@@ -748,10 +744,39 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
             // pt[2] = /*X coordinate of the estimated point */;
             /////////////////////////////////////////////////////////////////////////////////////////
 
-                
-            //triangulatePoints(proj_mat0, proj_mat1, points0, points1, hpoints4D);
 
-                
+            cv::Point2d p0(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]], observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]),
+            cv::Point2d p1(observations_[2*cam_observation_[cam_idx][pt_idx]], observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
+
+            cv::Mat R0, R1;
+            cv::Mat rotation_vector0 = (cv::Mat_<double>(3, 1) << cam0_data[0], cam0_data[1], cam0_data[2]);
+            cv::Mat rotation_vector1 = (cv::Mat_<double>(3, 1) << cam1_data[0], cam1_data[1], cam1_data[2]);
+            cv::Rodrigues(rotation_vector0, R0);
+            cv::Rodrigues(rotation_vector1, R1);
+
+            // Extract the translation parameters for both cameras.
+            cv::Mat translation_vector0 = (cv::Mat_<double>(3, 1) << cam0_data[3], cam0_data[4], cam0_data[5]);
+            cv::Mat translation_vector1 = (cv::Mat_<double>(3, 1) << cam1_data[3], cam1_data[4], cam1_data[5]);
+
+            // Compute the projection matrices for both cameras.
+            R0.copyTo(proj_mat0(cv::Rect(0, 0, 3, 3)));
+            translation_vector0.copyTo(proj_mat0(cv::Rect(3, 0, 1, 3)));
+            R1.copyTo(proj_mat1(cv::Rect(0, 0, 3, 3)));
+            translation_vector1.copyTo(proj_mat1(cv::Rect(3, 0, 1, 3)));
+            
+            if(checkCheiralityConstraint(new_cam_pose_idx, pt_idx) && checkCheiralityConstraint(cam_idx, pt_idx))
+            {
+              cv::triangulatePoints(proj_mat0, proj_mat1, points0, points1, hpoints4D);   
+              if(hpoints4D.at<double>(2,0)/hpoints4D.at<double>(3,0) > 0.0)
+              {
+                n_new_pts++;
+                pts_optim_iter_[pt_idx] = 1;
+                double *pt = pointBlockPtr(pt_idx);
+                pt[0] = hpoints4D.at<double>(0,0)/hpoints4D.at<double>(3,0);
+                pt[1] = hpoints4D.at<double>(1,0)/hpoints4D.at<double>(3,0);
+                pt[2] = hpoints4D.at<double>(2,0)/hpoints4D.at<double>(3,0);
+              }
+            }
                 
             /////////////////////////////////////////////////////////////////////////////////////////
 
