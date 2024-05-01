@@ -23,37 +23,44 @@ struct ReprojectionError
   // pay attention to the order of the template parameters
   //////////////////////////////////////////////////////////////////////////////////////////
   ReprojectionError(double observed_x, double observed_y)
-      : observed_x(observed_x), observed_y(observed_y) {}
-  
-  template <typename T>
-  bool operator()(const T* const camera,
-                  const T* const point,
-                  T* residuals) const {
-    // camera[0,1,2] are the angle-axis rotation.
-    T p[3];
-    ceres::AngleAxisRotatePoint(camera, point, p);
-    // camera[3,4,5] are the translation.
-    p[0] += camera[3]; p[1] += camera[4]; p[2] += camera[5];
+          : observed_x(observed_x), observed_y(observed_y) {}
 
-    // Compute final projected point position.
-    // K is identity matrix, so we don't need to multiply
-    T predicted_x =  p[0] / p[2];
-    T predicted_y =  p[1] / p[2];
+    template <typename T>
+    bool operator()(const T* const camera, const T* const point, T* residuals) const
+    {
+        // Rotate the point
+        T p[3];
+        ceres::AngleAxisRotatePoint(camera, point, p);
 
-    // The error is the difference between the predicted and observed position.
-    residuals[0] = predicted_x - T(observed_x);
-    residuals[1] = predicted_y - T(observed_y);
-    return true;
-  }
+        // Translate the point
+        p[0] += camera[3];
+        p[1] += camera[4];
+        p[2] += camera[5];
 
-  static ceres::CostFunction* Create(const double observed_x,
-                                      const double observed_y) {
-     return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3> 
-       (observed_x, observed_y); //why 6 and not 9? 6D + size of camera parameters -> 9
-   }
 
-  double observed_x;
-  double observed_y;
+        // Normalize the point (2D)
+        p[0] /= p[2];
+        p[1] /= p[2];
+
+        // Compute the residuals
+        residuals[0] = p[0] - T(observed_x);
+        residuals[1] = p[1] - T(observed_y);
+
+        return true;
+    }
+    // 2 residuals (x and y) 2D points
+    // 6 parameters for the camera pose (3 for the rotation and 3 for the translation)
+    // 3 parameters for the 3D point
+    static ceres::CostFunction* Create(const double observed_x, const double observed_y)
+    {
+        return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3>(
+            new ReprojectionError(observed_x, observed_y)
+        );
+    }
+
+    double observed_x;
+    double observed_y;
+
   /////////////////////////////////////////////////////////////////////////////////////////
 };
 
@@ -786,13 +793,20 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
             /////////////////////////////////////////////////////////////////////////////////////////
 
 
-            cv::Point2d p0(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]], observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]),
-            cv::Point2d p1(observations_[2*cam_observation_[cam_idx][pt_idx]], observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
+            // cv::Point2d p0(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]], observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]),
+            // cv::Point2d p1(observations_[2*cam_observation_[cam_idx][pt_idx]], observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
 
             double cam0_data_t[] = {cam0_data[3], cam0_data[4], cam0_data[5]};
             double cam1_data_t[] = {cam1_data[3], cam1_data[4], cam1_data[5]};
             double cam0_data_r[] = {cam0_data[0], cam0_data[1], cam0_data[2]};
             double cam1_data_r[] = {cam1_data[0], cam1_data[1], cam1_data[2]};
+            
+            // Extract the 2D points
+            points0.emplace_back(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]],
+                                   observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]);
+            points1.emplace_back(observations_[2*cam_observation_[cam_idx][pt_idx]],
+                                   observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
+            
 
             cv::Mat R0, R1;
             cv::Mat rotation_vector0(3, 1, CV_64F, cam0_data_r);
@@ -823,6 +837,9 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
                 pt[2] = hpoints4D.at<double>(2,0)/hpoints4D.at<double>(3,0);
               }
             }
+            
+            points0.clear();
+            points1.clear();
                 
             /////////////////////////////////////////////////////////////////////////////////////////
 
