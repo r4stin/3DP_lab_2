@@ -22,7 +22,45 @@ struct ReprojectionError
   // WARNING: When dealing with the AutoDiffCostFunction template parameters,
   // pay attention to the order of the template parameters
   //////////////////////////////////////////////////////////////////////////////////////////
-  
+  ReprojectionError(double observed_x, double observed_y)
+          : observed_x(observed_x), observed_y(observed_y) {}
+
+    template <typename T>
+    bool operator()(const T* const camera, const T* const point, T* residuals) const
+    {
+        // Rotate the point
+        T p[3];
+        ceres::AngleAxisRotatePoint(camera, point, p);
+
+        // Translate the point
+        p[0] += camera[3];
+        p[1] += camera[4];
+        p[2] += camera[5];
+
+
+        // Normalize the point (2D)
+        p[0] /= p[2];
+        p[1] /= p[2];
+
+        // Compute the residuals
+        residuals[0] = p[0] - T(observed_x);
+        residuals[1] = p[1] - T(observed_y);
+
+        return true;
+    }
+    // 2 residuals (x and y) 2D points
+    // 6 parameters for the camera pose (3 for the rotation and 3 for the translation)
+    // 3 parameters for the 3D point
+    static ceres::CostFunction* Create(const double observed_x, const double observed_y)
+    {
+        return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3>(
+            new ReprojectionError(observed_x, observed_y)
+        );
+    }
+
+    double observed_x;
+    double observed_y;
+
   /////////////////////////////////////////////////////////////////////////////////////////
 };
 
