@@ -576,7 +576,7 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
     cv::Rodrigues(R1, rvec);
     double angle_y = rvec.at<double>(1) * 180.0 / CV_PI;
 
-    if (angle_y < 45.0 || angle_y > 135.0)  
+    /*if (angle_y < 45.0 || angle_y > 135.0)  
     {
         // Store the transformation
         init_r_mat = R1.clone();
@@ -584,11 +584,11 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
     }
     else
     {
-        return false; 
+        //return false; 
         
-    }
+    }*/
     //alternative method
-    /*if (abs(t.at<double>(2)) > abs(t.at<double>(0)) && abs(t.at<double>(2)) > abs(t.at<double>(1)))
+    if (abs(t.at<double>(2)) > abs(t.at<double>(0)) && abs(t.at<double>(2)) > abs(t.at<double>(1)))
     {
         return false;
     }
@@ -597,7 +597,7 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
         // Store the transformation
         init_r_mat = R1.clone();
         init_t_vec = t.clone();
-    }*/
+    }
   
   
   
