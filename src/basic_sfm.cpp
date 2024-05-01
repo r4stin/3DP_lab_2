@@ -793,8 +793,15 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
             /////////////////////////////////////////////////////////////////////////////////////////
 
 
-            cv::Point2d p0(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]], observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]),
-            cv::Point2d p1(observations_[2*cam_observation_[cam_idx][pt_idx]], observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
+            // cv::Point2d p0(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]], observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]),
+            // cv::Point2d p1(observations_[2*cam_observation_[cam_idx][pt_idx]], observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
+            
+            // Extract the 2D points
+            points0.emplace_back(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]],
+                                   observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]);
+            points1.emplace_back(observations_[2*cam_observation_[cam_idx][pt_idx]],
+                                   observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
+            
 
             cv::Mat R0, R1;
             cv::Mat rotation_vector0 = (cv::Mat_<double>(3, 1) << cam0_data[0], cam0_data[1], cam0_data[2]);
@@ -825,6 +832,9 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
                 pt[2] = hpoints4D.at<double>(2,0)/hpoints4D.at<double>(3,0);
               }
             }
+            
+            points0.clear();
+            points1.clear();
                 
             /////////////////////////////////////////////////////////////////////////////////////////
 
