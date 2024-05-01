@@ -22,7 +22,51 @@ struct ReprojectionError
   // WARNING: When dealing with the AutoDiffCostFunction template parameters,
   // pay attention to the order of the template parameters
   //////////////////////////////////////////////////////////////////////////////////////////
+  ReprojectionError(double observed_x, double observed_y)
+      : observed_x(observed_x), observed_y(observed_y) {}
   
+  template <typename T>
+  bool operator()(const T* const camera,
+                  const T* const point,
+                  T* residuals) const {
+    // camera[0,1,2] are the angle-axis rotation.
+    T p[3];
+    ceres::AngleAxisRotatePoint(camera, point, p);
+    // camera[3,4,5] are the translation.
+    p[0] += camera[3]; p[1] += camera[4]; p[2] += camera[5];
+
+    // Compute the center of distortion. The sign change comes from
+    // the camera model that Noah Snavely's Bundler assumes, whereby
+    // the camera coordinate system has a negative z axis.
+    T xp = - p[0] / p[2];
+    T yp = - p[1] / p[2];
+
+    /*// Apply second and fourth order radial distortion.
+    const T& l1 = camera[7];
+    const T& l2 = camera[8];
+    T r2 = xp*xp + yp*yp;
+    T distortion = 1.0 + r2  * (l1 + l2  * r2);*/
+
+    // Compute final projected point position.
+    // K is identity matrix, so we don't need to multiply
+    const T& focal = camera[6];
+    T predicted_x = focal * xp;
+    T predicted_y = focal * yp;
+
+    // The error is the difference between the predicted and observed position.
+    residuals[0] = predicted_x - T(observed_x);
+    residuals[1] = predicted_y - T(observed_y);
+    return true;
+  }
+
+  static ceres::CostFunction* Create(const double observed_x,
+                                      const double observed_y) {
+     return new ceres::AutoDiffCostFunction<ReprojectionError, 2, 6, 3> 
+       (observed_x, observed_y); //why 6 and not 9? 6D + size of camera parameters -> 9
+   }
+
+  double observed_x;
+  double observed_y;
   /////////////////////////////////////////////////////////////////////////////////////////
 };
 
@@ -758,15 +802,20 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
             cv::Point2d p0(observations_[2*cam_observation_[new_cam_pose_idx][pt_idx]], observations_[2*cam_observation_[new_cam_pose_idx][pt_idx] + 1]),
             cv::Point2d p1(observations_[2*cam_observation_[cam_idx][pt_idx]], observations_[2*cam_observation_[cam_idx][pt_idx] + 1]);
 
+            double cam0_data_t[] = {cam0_data[3], cam0_data[4], cam0_data[5]};
+            double cam1_data_t[] = {cam1_data[3], cam1_data[4], cam1_data[5]};
+            double cam0_data_r[] = {cam0_data[0], cam0_data[1], cam0_data[2]};
+            double cam1_data_r[] = {cam1_data[0], cam1_data[1], cam1_data[2]};
+
             cv::Mat R0, R1;
-            cv::Mat rotation_vector0 = (cv::Mat_<double>(3, 1) << cam0_data[0], cam0_data[1], cam0_data[2]);
-            cv::Mat rotation_vector1 = (cv::Mat_<double>(3, 1) << cam1_data[0], cam1_data[1], cam1_data[2]);
+            cv::Mat rotation_vector0(3, 1, CV_64F, cam0_data_r);
+            cv::Mat rotation_vector1(3, 1, CV_64F, cam1_data_r);
+            
             cv::Rodrigues(rotation_vector0, R0);
             cv::Rodrigues(rotation_vector1, R1);
 
-            // Extract the translation parameters for both cameras.
-            cv::Mat translation_vector0 = (cv::Mat_<double>(3, 1) << cam0_data[3], cam0_data[4], cam0_data[5]);
-            cv::Mat translation_vector1 = (cv::Mat_<double>(3, 1) << cam1_data[3], cam1_data[4], cam1_data[5]);
+            cv::Mat translation_vector0(3, 1, CV_64F, cam0_data_t);
+            cv::Mat translation_vector1(3, 1, CV_64F, cam1_data_t);
 
             // Compute the projection matrices for both cameras.
             R0.copyTo(proj_mat0(cv::Rect(0, 0, 3, 3)));
@@ -904,7 +953,20 @@ void BasicSfM::bundleAdjustmentIter( int new_cam_idx )
         // while the point position blocks have size (point_block_size_) of 3 elements.
         //////////////////////////////////////////////////////////////////////////////////
 
+        ceres::CostFunction* cost_function = ReprojectionError::Create(
+          observations_[2*i_obs],
+          observations_[2*i_obs + 1]);
 
+        LossFunction* loss_function = new ceres::CauchyLoss(2 * max_reproj_err_);
+
+        double* camera = cameraBlockPtr (cam_pose_index_[i_obs]);
+        double* point = pointBlockPtr (point_index_[i_obs]);
+
+        problem.AddResidualBlock(cost_function,
+                           loss_function,
+                           camera,
+                           point;
+        
         
         
         // ceres solver
