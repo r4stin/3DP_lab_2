@@ -95,16 +95,29 @@ void FeatureMatcher::exhaustiveMatching()
 
 
         double threshold = 1.0;
-        cv::Mat mask;
-        cv::Mat E = cv::findEssentialMat(points1, points2, new_intrinsics_matrix_, cv::RANSAC, 0.999, threshold, mask);
-        cv::Mat H = cv::findHomography(points1, points2, cv::RANSAC, threshold, mask);
-        // Extract inliers
-        for (int k = 0; k < mask.rows; k++)
+        cv::Mat mask_E, mask_H;
+        cv::Mat E = cv::findEssentialMat(points1, points2, new_intrinsics_matrix_, cv::RANSAC, 0.999, threshold, mask_E);
+        cv::Mat H = cv::findHomography(points1, points2, cv::RANSAC, threshold, mask_H);
+        
+        if(cv::countNonZero(mask_E) > cv::countNonZero(mask_H)) //if the number of inliers of Essential matrix is more than Homograph matrix
         {
-            if (mask.at<uchar>(k, 0) == 1)
-            {
-                inlier_matches.push_back(matches[k]);
-            }
+          for (int k = 0; k < mask_E.rows; k++)
+          {
+              if (mask_E.at<uchar>(k, 0) == 1)
+              {
+                  inlier_matches.push_back(matches[k]);
+              }
+          }
+        }
+        else
+        {
+          for (int k = 0; k < mask_H.rows; k++)
+          {
+              if (mask_H.at<uchar>(k, 0) == 1)
+              {
+                  inlier_matches.push_back(matches[k]);
+              }
+          }
         }
 
         // Threshold for inliers to set the matches
@@ -114,6 +127,7 @@ void FeatureMatcher::exhaustiveMatching()
         }
 
         inlier_matches.clear();
+        matches.clear();
       
       
 
