@@ -824,8 +824,8 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
             R1.copyTo(proj_mat1(cv::Rect(0, 0, 3, 3)));
             translation_vector1.copyTo(proj_mat1(cv::Rect(3, 0, 1, 3)));
             
-            //if(checkCheiralityConstraint(new_cam_pose_idx, pt_idx) && checkCheiralityConstraint(cam_idx, pt_idx))
-            //{
+            if(checkCheiralityConstraint(new_cam_pose_idx, pt_idx) && checkCheiralityConstraint(cam_idx, pt_idx))
+            {
               cv::triangulatePoints(proj_mat0, proj_mat1, points0, points1, hpoints4D);   
               if(hpoints4D.at<double>(2,0)/hpoints4D.at<double>(3,0) > 0.0)
               {
@@ -836,7 +836,7 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
                 pt[1] = hpoints4D.at<double>(1,0)/hpoints4D.at<double>(3,0);
                 pt[2] = hpoints4D.at<double>(2,0)/hpoints4D.at<double>(3,0);
               }
-            //}
+            }
             
             points0.clear();
             points1.clear();
