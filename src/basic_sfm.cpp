@@ -674,7 +674,7 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
 
   // First bundle adjustment iteration: here we have only two camera poses, i.e., the seed pair
   bundleAdjustmentIter(new_cam_pose_idx );
-
+  std::vector<double> prev_params = parameters_;
   // Start to register new poses and observations...
   for(int iter = 1; iter < num_cam_poses_ - 1; iter++ )
   {
@@ -884,7 +884,19 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
     // must return false). To check if there was a divergence you could for example check how
     // the previous camera and point positions were updated during this iteration.
     /////////////////////////////////////////////////////////////////////////////////////////
-
+    
+    /*double threshold_param = 1.0;
+    for(int i=0; i<parameters_.size(); i++){
+      if(parameters_[i] != 0.0 && prev_params[i] != 0.0){
+        if(abs(parameters_[i] - prev_params[i]) > threshold_param){
+          std::cout<<"Bad Reconstruction"<<std::endl;
+          return false;
+        } 
+      }
+    }
+      
+    prev_params = parameters_;*/
+    
     // ....
     //  if( <bad reconstruction> )
     //    return false;
