@@ -887,88 +887,40 @@ bool BasicSfM::incrementalReconstruction( int seed_pair_idx0, int seed_pair_idx1
     //  if( <bad reconstruction> )
     //    return false;
 
-////////////////////////// APP1 /////////////////////////////////
-//      double *camera = cameraBlockPtr(new_cam_pose_idx);
-//      double *point = pointBlockPtr(new_cam_pose_idx);
-//      float camera_thresh = 2.0; //2 // 0.5  / 0.2
-//      float point_thresh = 2.0;  // 2  // 0.5 /0.2 400
-//
-//    if (iter > 1 ){
-//        std::cout << "new_cam_pose_idx: " << camera[3] << " " << camera[4] << " " << camera[5] << std::endl;
-//        std::cout << "prev_cam_pose_idx: " << prev_camera[0] << " " << prev_camera[1] << " " << prev_camera[2] << std::endl;
-//        if (fabs(prev_camera[0] - camera[3]) > camera_thresh || fabs(prev_camera[1] - camera[4]) > camera_thresh || fabs(prev_camera[2] - camera[5]) > camera_thresh) {
-//            std::cout << "fabs camera: " << fabs(prev_camera[0] - camera[3]) << " " << fabs(prev_camera[1] - camera[4]) << " "
-//                      << fabs(prev_camera[2] - camera[5]) << std::endl;
-//            return false;
-//        }
-//        else if(fabs(prev_point[0] - point[0]) > point_thresh || fabs(prev_point[1] - point[1]) > point_thresh || fabs(prev_point[2] - point[2]) > point_thresh) {
-//            std::cout << "fabs point: " << fabs(prev_point[0] - point[0]) << " " << fabs(prev_point[1] - point[1])
-//                      << " "
-//                      << fabs(prev_point[2] - point[2]) << std::endl;
-//            return false;
-//        }
-//    }
-//    prev_camera[0] = camera[3];
-//    prev_camera[1] = camera[4];
-//    prev_camera[2] = camera[5];
-//    prev_point[0] = point[0];
-//    prev_point[1] = point[1];
-//    prev_point[2] = point[2];
 
-    //////////////////////////// APP2 /////////////////////////////////
-//      double threshold_param = 10.0;
-//  for(int i=0; i<parameters_.size(); i++){
-//    if(parameters_[i] != 0.0 && prev_params[i] != 0.0){
-//      if(fabs(parameters_[i] - prev_params[i]) > threshold_param){
-//          std::cout << "fabs: " << fabs(parameters_[i] - prev_params[i]) << std::endl;
-//        std::cout<<"Bad Reconstruction"<<std::endl;
-//
-//        return false;
-//      }
-//    }
-//  }
-//
-//  prev_params = parameters_;
+    Eigen::Vector3d vol_min_p = Eigen::Vector3d::Constant((std::numeric_limits<double>::max())),
+               vol_max_p = Eigen::Vector3d::Constant((-std::numeric_limits<double>::max()));
+    Eigen::Vector3d prev_min_p = Eigen::Vector3d::Constant((std::numeric_limits<double>::max())),
+               prev_max_p = Eigen::Vector3d::Constant((-std::numeric_limits<double>::max()));
+    double threshold_param = 3.0; 
+    int counter = 0;
+    for (int i = 0; i < num_points_; i++) {
+      if (pts_optim_iter_[i] > 0) {  // Only consider registered points so far
 
+          if (pts[i * point_block_size_] > vol_max_p(0)) vol_max_p(0) = pts[i * point_block_size_];
+          if (pts[i * point_block_size_ + 1] > vol_max_p(1)) vol_max_p(1) = pts[i * point_block_size_ + 1];
+          if (pts[i * point_block_size_ + 2] > vol_max_p(2)) vol_max_p(2) = pts[i * point_block_size_ + 2];
+          if (pts[i * point_block_size_] < vol_min_p(0)) vol_min_p(0) = pts[i * point_block_size_];
+          if (pts[i * point_block_size_ + 1] < vol_min_p(1)) vol_min_p(1) = pts[i * point_block_size_ + 1];
+          if (pts[i * point_block_size_ + 2] < vol_min_p(2)) vol_min_p(2) = pts[i * point_block_size_ + 2];
 
-////////////////////////// APP3 /////////////////////////////////
-
-
-      Eigen::Vector3d vol_min_p = Eigen::Vector3d::Constant((std::numeric_limits<double>::max())),
-              vol_max_p = Eigen::Vector3d::Constant((-std::numeric_limits<double>::max()));
-      Eigen::Vector3d prev_min_p = Eigen::Vector3d::Constant((std::numeric_limits<double>::max())),
-              prev_max_p = Eigen::Vector3d::Constant((-std::numeric_limits<double>::max()));
-      double threshold_param = 1.0;  // 1.0 for images1
-      int counter = 0;
-      for (int i = 0; i < num_points_; i++) {
-          if (pts_optim_iter_[i] > 0) {  // Only consider registered points so far
-
-
-              if (pts[i * point_block_size_] > vol_max_p(0)) vol_max_p(0) = pts[i * point_block_size_];
-              if (pts[i * point_block_size_ + 1] > vol_max_p(1)) vol_max_p(1) = pts[i * point_block_size_ + 1];
-              if (pts[i * point_block_size_ + 2] > vol_max_p(2)) vol_max_p(2) = pts[i * point_block_size_ + 2];
-              if (pts[i * point_block_size_] < vol_min_p(0)) vol_min_p(0) = pts[i * point_block_size_];
-              if (pts[i * point_block_size_ + 1] < vol_min_p(1)) vol_min_p(1) = pts[i * point_block_size_ + 1];
-              if (pts[i * point_block_size_ + 2] < vol_min_p(2)) vol_min_p(2) = pts[i * point_block_size_ + 2];
-
-              if ((prev_max_p - prev_min_p).norm() > 0.0) {
-                  if ((vol_max_p - vol_min_p).norm() > (prev_max_p - prev_min_p).norm() + threshold_param) {
-                      std::cout << "Difference: " << (vol_max_p - vol_min_p).norm() - (prev_max_p - prev_min_p).norm() << std::endl;
-                      std::cout << "Bad Reconstruction" << std::endl;
-                      return false;
-                  }
-              }
-
-              counter++;
-
+          if ((prev_max_p - prev_min_p).norm() > 0.0) {
+            if ((vol_max_p - vol_min_p).norm() > (prev_max_p - prev_min_p).norm() + threshold_param) {
+              std::cout << "Difference: " << (vol_max_p - vol_min_p).norm() - (prev_max_p - prev_min_p).norm() << std::endl;
+              std::cout << "Bad Reconstruction" << std::endl;
+              return false;
+            }
           }
-          prev_min_p = vol_min_p;
-          prev_max_p = vol_max_p;
+
+          counter++;
+
       }
-      std::cout << "Number of vertices: " << counter << std::endl;
+      prev_min_p = vol_min_p;
+      prev_max_p = vol_max_p;
+    }
+      
+    std::cout << "Number of vertices: " << counter << std::endl;
 
-
-      /////////////////////////////////////////////////////////////////////////////////////////
   }
 
   return true;
